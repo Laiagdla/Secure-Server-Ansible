@@ -1,36 +1,53 @@
-    - name: update and upgrade
-      become: true
-      apt:
-        update_cache: yes
-        upgrade: yes
+- name: Prepare lynis installation
+  become: true
+  block:
+    - name: Download Cisofy GPG key
+      ansible.builtin.get_url:
+        url: https://packages.cisofy.com/keys/cisofy-software-public.key
+        dest: /etc/apt/trusted.gpg.d/cisofy-software-public.key
+        owner: root
+        group: root
+        mode: '0644'
 
-    - name: install lynis dependencies
-      become: true
-      apt:
-        name: gpg
-        state: present
+    - name: Add Cisofy GPG key
+      ansible.builtin.apt_key:
+        file: /etc/apt/trusted.gpg.d/cisofy-software-public.key
 
-    - name: prepare lynis installation
-      become: true
-      shell: |
-        curl -fsSL https://packages.cisofy.com/keys/cisofy-software-public.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/cisofy-software-public.gpg
-        echo "deb [arch=amd64,arm64 signed-by=/etc/apt/trusted.gpg.d/cisofy-software-public.gpg] https://packages.cisofy.com/community/lynis/deb/ stable main" | sudo tee /etc/apt/sources.list.d/cisofy-lynis.list
+    - name: Add Cisofy Lynis repository
+      ansible.builtin.lineinfile:
+        path: /etc/apt/sources.list.d/cisofy-lynis.list
+        line: "deb https://packages.cisofy.com/community/lynis/deb/ stable main"
+        create: true
+        owner: root
+        group: root
+        mode: '0644'
 
-    - name: update and upgrade
-      become: true
-      apt:
-        update_cache: yes
-        upgrade: yes
+# - name: Prepare lynis installation
+#   become: true
+#   ansible.builtin.shell: |
+#     wget -O - https://packages.cisofy.com/keys/cisofy-software-public.key | sudo apt-key add -
+#     echo "deb https://packages.cisofy.com/community/lynis/deb/ stable main" | sudo tee /etc/apt/sources.list.d/cisofy-lynis.list
 
-    - name: install lynis
-      become: true
-      apt:
-        name: lynis
-        state: present
+- name: Update and upgrade
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: true
 
-    - name: update and run first lynis audit
-      become: true
-      shell: |
-        lynis update info
-        lynis audit system | ansi2html -l > /tmp/lynis-report.html 
-        echo "First Lynis report see attachment" | mail -A /tmp/lynis-report.html -s "Lynis report" {{ mail_to }}
+- name: Install lynis
+  become: true
+  ansible.builtin.apt:
+    name: lynis
+    state: present
+
+- name: Update and run first lynis audit
+  become: true
+  register: lynis
+  ansible.builtin.shell: |
+    lynis update info
+    set -o pipefail
+    lynis audit system | ansi2html -l > /tmp/lynis-report.html
+    echo "First Lynis report see attachment" | mail -A /tmp/lynis-report.html -s "Lynis report" {{ mail_to }}
+  args:
+    executable: /bin/bash
+  changed_when: lynis.rc != 0

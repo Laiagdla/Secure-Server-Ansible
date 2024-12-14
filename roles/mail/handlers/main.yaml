@@ -1,0 +1,4 @@
+- name: Send a testmail
+  ansible.builtin.command: echo "Testmail content" | mail -s "Testmail subject" {{ mail_to }}
+  register: mail_result
+  changed_when: mail_result.rc != 0

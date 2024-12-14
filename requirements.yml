@@ -1,0 +1,3 @@
+# https://github.com/ansible-collections/ansible.posix
+collections:
+  - name: ansible.posix

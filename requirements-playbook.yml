@@ -1,7 +1,7 @@
-    - name: Requirements-Playbook
-      hosts: debian-server
-      remote_user: root
-      vars_files: ./group_vars/variables.yml
+- name: Requirements-Playbook
+  hosts: wipperhome
+  remote_user: wipper
+  vars_files: ./group_vars/variables.yml
 
-      roles:
-        - requirements
+  roles:
+    - requirements
